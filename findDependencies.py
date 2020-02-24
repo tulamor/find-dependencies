@@ -117,9 +117,10 @@ def pythonDeps(rel):
               line = line.rstrip('\n')
               if re.search(r'^\s*#', line):
                 continue
-              match = re.search(r'^\s*from\s+([^\s]+)\s+import\s+', line)
-              if match:
-                for x in import2CMSSWDir(match.group(1), cache):
+              match_from_import = re.search(r'^\s*from\s+([^\s]+)\s+import\s+', line)
+              match_import = re.search(r'^\s*import\s+([^\s]+)\s*', line)
+              if match_from_import:
+                for x in import2CMSSWDir(match_from_import.group(1), cache):
 
                   if not cache.has_key("usedby"): cache["usedby"] = {}
                   if not cache.has_key("uses"): cache["uses"] = {}
@@ -129,19 +130,33 @@ def pythonDeps(rel):
                   if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
                   cache["usedby"][x][file] = 1
                   cache["uses"][file][x] = 1
-              # else:
-              #   print(line)
-              elif re.search(r'^\s*import\s+([^\s]+)\s*', line):
-                for x in import2CMSSWDir(match.group(1), cache):
-                  print x
-                  # cache["usedby"][x][file] = 1
-                  # cache["uses"][file][x] = 1
+              elif match_import:
+                for x in import2CMSSWDir(match_import.group(1), cache):
+                  # print x
+
+
+                  if not cache.has_key("usedby"): cache["usedby"] = {}
+                  if not cache.has_key("uses"): cache["uses"] = {}
+                  if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
+                  if not cache["uses"].has_key(file): cache["uses"][file] = {}
+                  if not cache["usedby"][x].has_key(file): cache["usedby"][x][file] = {}
+                  if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
+
+                  cache["usedby"][x][file] = 1
+                  cache["uses"][file][x] = 1
                   # print(cache["usedby"][x][file])
                   # print(cache["uses"][file][x])
-      # for type_ in ("uses","usedby"):
-      #   with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
-      #     for x in sorted(cache[type_].keys()):
-      #       ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
+    from pprint import pprint
+    pprint(cache)
+  # for type_ in ("uses","usedby"):
+  #   with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
+  #     if not cache.has_key("type_"): cache["type_"] = {}
+  #     if not cache["type_"].has_key(x): cache["type_"][x] = {}
+  #     for x in sorted(cache[type_].keys()):
+  #       print cache[type_][x].keys()
+  #       # ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
+  #       ref.write("-----------")
+
 
 def import2CMSSWDir(str, cache):
   pyfiles = []
