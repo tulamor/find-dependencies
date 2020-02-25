@@ -22,7 +22,6 @@ if scramroot is None:
 global name, dir
 name, dir = None, None
 
-
 import os
 cwd = os.getcwd()
 
@@ -34,11 +33,9 @@ beginning = ""
 directory = rel + "/tmp" # root dir for traversing
 
 def doexec(*args):
-  # print(name)
   global uses
   getnext = 0
   depname = ""
-  index = 1
   with open(name, 'r') as file:
     for l in file:
       l = l.rstrip('\n')
@@ -55,7 +52,6 @@ def doexec(*args):
         if t == "src": foundsrc = 1
       tsp1 = tsp1[:-1]
       if tsp1 == "": continue
-
       if getnext == 1:
         depname = tsp1
         getnext = 0
@@ -66,50 +62,25 @@ def doexec(*args):
             getnext = 1
         else:
           if re.search( r'^src', sp1[0]):
-            # print("depname: %s" % depname)
-            # print("   tsp1: %s" % tsp1)
             if depname not in uses.keys():
               uses[depname] = "%s " % tsp1
-              # uses[depname] = {}
             else: 
               uses[depname] += "%s " % tsp1
             if tsp1 not in usedby.keys():
-              # usedby[tsp1] = {}
               usedby[tsp1] = "%s " % depname
             else: 
               usedby[tsp1] += "%s " % depname
 
-counter = 0
-
-count_rel = 0
-count_fname = 0
-count_sub_file = 0
-count_line = 0
-
-match_counter = 0
 
 def pythonDeps(rel):
-
-  global count_rel
-  global count_fname
-  global count_sub_file
-  global count_line
-  global counter
-
-  # print("-- %s -- rel: %s" % (count_rel, rel))
-  # count_rel += 1
   cache = {}
   for root, dirs, files in os.walk("%s/src/" % rel):
     for filename in files:
       fpath = os.path.join(root, filename)
       if re.search(r'.py$', fpath):
         fname = fpath
-        # print("-- %s -- fname: %s" % (count_fname, fname))
-        # count_fname += 1
         file = fname
         file = re.sub(r"^%s\/+src\/+" % rel, r'', file)
-        # print("-- %s -- sub file: %s" % (count_sub_file, file))
-        # count_sub_file += 1
         if not re.search(r'\/python\/', fname):
           continue
         with open(fname, 'r') as f:
@@ -122,7 +93,6 @@ def pythonDeps(rel):
               match_import = re.search(r'^\s*import\s+([^\s]+)\s*', line)
               if match_from_import:
                 for x in import2CMSSWDir(match_from_import.group(1), cache):
-
                   if not cache.has_key("usedby"): cache["usedby"] = {}
                   if not cache.has_key("uses"): cache["uses"] = {}
                   if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
@@ -133,51 +103,36 @@ def pythonDeps(rel):
                   cache["uses"][file][x] = 1
               elif match_import:
                 for x in import2CMSSWDir(match_import.group(1), cache):
-                  # print x
-
-
                   if not cache.has_key("usedby"): cache["usedby"] = {}
                   if not cache.has_key("uses"): cache["uses"] = {}
                   if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
                   if not cache["uses"].has_key(file): cache["uses"][file] = {}
                   if not cache["usedby"][x].has_key(file): cache["usedby"][x][file] = {}
                   if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
-
                   cache["usedby"][x][file] = 1
                   cache["uses"][file][x] = 1
-                  # print(cache["usedby"][x][file])
-                  # print(cache["uses"][file][x])
   for type_ in ("uses","usedby"):
     with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
-     #if not cache.has_key("type_"): cache["type_"] = {}
-     #if not cache["type_"].has_key(x): cache["type_"][x] = {}
       for x in sorted(cache[type_].keys()):
-        # print cache[type_][x].keys()
         ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
 
 
 def import2CMSSWDir(str, cache):
   pyfiles = []
-  # return "===string: %s\n---cache : %s" % (str, cache)
   if not cache.has_key("pymodule"): cache["pymodule"] = {}
   if not cache.has_key("noncmsmodule"): cache["noncmsmodule"] = {}
   for s in str.split(","):
     s = re.sub(r'\.', r'/', s)
-    # print "--s--: %s" % s
     if s in cache["pymodule"]:
       pyfiles.append(cache["pymodule"][s])
-      # print cache
     elif s not in cache["noncmsmodule"]:
       if os.path.exists("%s/python/%s.py" % (rel, s)):
-        # print ("%s/python/%s.py" % (rel, s))
         match = re.search( r'^([^\/]+\/+[^\/]+)\/+(.+)$', s)
         if match:
-          # print "*** %s\n###%s" % (match.group(1), match.group(2))
           cache["pymodule"][s] = "%s/python/%s.py" % (match.group(1), match.group(2))
           pyfiles.append("%s/python/%s.py" % (match.group(1), match.group(2)))
       else: cache["noncmsmodule"][s] = 1
   return pyfiles
-
 
 '''
 
