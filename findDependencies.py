@@ -33,17 +33,12 @@ beginning = ""
 # Traverse desired filesystems
 directory = rel + "/tmp" # root dir for traversing
 
-with open(rel + "/etc/dependencies/uses.out", 'w') as file:
-  for key, value in uses.items():
-    file.write("%s %s\n" % (key,value))
-
-with open(rel + "/etc/dependencies/usedby.out", 'w') as file:
-  for key, value in uses.items():
-    file.write("%s %s\n" % (key,value))
-
 def doexec(*args):
-  print("---- doexec running------" + name)
+  # print(name)
+  global uses
   getnext = 0
+  depname = ""
+  index = 1
   with open(name, 'r') as file:
     for l in file:
       l = l.rstrip('\n')
@@ -60,6 +55,7 @@ def doexec(*args):
         if t == "src": foundsrc = 1
       tsp1 = tsp1[:-1]
       if tsp1 == "": continue
+
       if getnext == 1:
         depname = tsp1
         getnext = 0
@@ -70,13 +66,18 @@ def doexec(*args):
             getnext = 1
         else:
           if re.search( r'^src', sp1[0]):
-            if depname in uses.keys():
-              uses[depname] += tsp1
-            else: uses[depname] = tsp1
-            if tsp1 in usedby.keys():
-              usedby[tsp1] += depname
-            else: usedby[tsp1] = depname
-
+            # print("depname: %s" % depname)
+            # print("   tsp1: %s" % tsp1)
+            if depname not in uses.keys():
+              uses[depname] = "%s " % tsp1
+              # uses[depname] = {}
+            else: 
+              uses[depname] += "%s " % tsp1
+            if tsp1 not in usedby.keys():
+              # usedby[tsp1] = {}
+              usedby[tsp1] = "%s " % depname
+            else: 
+              usedby[tsp1] += "%s " % depname
 
 counter = 0
 
@@ -146,16 +147,13 @@ def pythonDeps(rel):
                   cache["uses"][file][x] = 1
                   # print(cache["usedby"][x][file])
                   # print(cache["uses"][file][x])
-    from pprint import pprint
-    pprint(cache)
-  # for type_ in ("uses","usedby"):
-  #   with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
-  #     if not cache.has_key("type_"): cache["type_"] = {}
-  #     if not cache["type_"].has_key(x): cache["type_"][x] = {}
-  #     for x in sorted(cache[type_].keys()):
-  #       print cache[type_][x].keys()
-  #       # ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
-  #       ref.write("-----------")
+  for type_ in ("uses","usedby"):
+    with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
+     #if not cache.has_key("type_"): cache["type_"] = {}
+     #if not cache["type_"].has_key(x): cache["type_"][x] = {}
+      for x in sorted(cache[type_].keys()):
+        # print cache[type_][x].keys()
+        ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
 
 
 def import2CMSSWDir(str, cache):
@@ -234,12 +232,21 @@ def data2json(infile):
     jstr += l
   return json.loads(jstr)
 
+'''
+
 for root, dirs, files in os.walk(directory):
   for filename in files:
     name = os.path.join(root, filename)
-    if re.search( r'^.*(\.dep|\/a\/xr+\.cc\.d)\z', name): doexec(0, 'cat','{}')
+    if re.search( r'^.*(\.dep|\/a\/xr+\.cc\.d)', name):
+      doexec(0, 'cat','{}')
 
-'''
+with open(rel + "/etc/dependencies/uses.out", 'w') as file:
+  for key, value in sorted(uses.items()):
+    file.write("%s %s\n" % (key,value))
+
+with open(rel + "/etc/dependencies/usedby.out", 'w') as file:
+  for key, value in sorted(usedby.items()):
+    file.write("%s %s\n" % (key,value))
 
 pythonDeps(rel)
 #buildFileDeps(rel, scramarch, scramroot)
