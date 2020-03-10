@@ -4,6 +4,7 @@ import sys, re, os, json, gzip
 from argparse import ArgumentParser
 from glob import glob
 
+
 parser = ArgumentParser()
 parser.add_argument('-rel')
 parser.add_argument('-arch', dest = 'scramarch', default = os.environ.get("SCRAM_ARCH"))
@@ -175,19 +176,19 @@ def buildFileDeps(rel, arch, scramroot):
       for x in sorted(cache[type_].keys()):
         ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
 
-def write2File(path, data):
-  with open(path, 'w') as file:
-    for key, value in data:
-      file.write("%s %s\n" % (key,value))
-
-
 for root, dirs, files in os.walk(directory):
   for filename in files:
     name = os.path.join(root, filename)
     if re.search( r'^.*(\.dep|\/a\/xr+\.cc\.d)', name): doexec()
 
-write2File(rel + "/etc/dependencies/uses.out", sorted(uses.items()))
-write2File(rel + "/etc/dependencies/usedby.out", sorted(usedby.items()))
+with open(rel + "/etc/dependencies/uses.out", 'w') as file:
+  for key, value in sorted(uses.items()):
+    file.write("%s %s\n" % (key,value))
+
+with open(rel + "/etc/dependencies/usedby.out", 'w') as file:
+  for key, value in sorted(usedby.items()):
+    file.write("%s %s\n" % (key,value))
+
 pythonDeps(rel)
 buildFileDeps(rel, scramarch, scramroot)
 sys.exit()
