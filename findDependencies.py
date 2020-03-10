@@ -4,7 +4,6 @@ import sys, re, os, json, gzip
 from argparse import ArgumentParser
 from glob import glob
 
-
 parser = ArgumentParser()
 parser.add_argument('-rel')
 parser.add_argument('-arch', dest = 'scramarch', default = os.environ.get("SCRAM_ARCH"))
@@ -62,7 +61,18 @@ def doexec():
             else: 
               usedby[tsp1] += "%s " % depname
 
-def createCache(match, cache):
+def write2File(path, data, type_=None):
+  with open(path, 'w') as file:
+    if type_:
+      if re.search(r'^bf', path.split("/")[-1]):
+        if not data.has_key("type_"): data["type_"] = {}
+      for x in sorted(data[type_].keys()):
+        file.write("%s %s\n" % (x, " ".join(sorted(data[type_][x].keys()))))
+    else:
+      for key, value in sorted(data.items()):
+        file.write("%s %s\n" % (key,value))
+
+def createCache(match, cache, file):
   for x in import2CMSSWDir(match.group(1), cache):
     if not cache.has_key("usedby"): cache["usedby"] = {}
     if not cache.has_key("uses"): cache["uses"] = {}
@@ -93,13 +103,11 @@ def pythonDeps(rel):
               match_from_import = re.search(r'^\s*from\s+([^\s]+)\s+import\s+', line)
               match_import = re.search(r'^\s*import\s+([^\s]+)\s*', line)
               if match_from_import:
-                createCache(match_from_import, cache)
+                createCache(match_from_import, cache, file)
               elif match_import:
-                createCache(match_import, cache)
+                createCache(match_import, cache, file)
   for type_ in ("uses","usedby"):
-    with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
-      for x in sorted(cache[type_].keys()):
-        ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
+    write2File("%s/etc/dependencies/py%s.out" % (rel, type_), cache, type_)
 
 def import2CMSSWDir(str, cache):
   pyfiles = []
@@ -171,24 +179,15 @@ def buildFileDeps(rel, arch, scramroot):
   for dir in cache["dirs"].keys():
     updateBFDeps(dir, pcache, cache)
   for type_ in ("uses","usedby"):
-    with open("%s/etc/dependencies/bf%s.out" % (rel, type_), 'w') as ref:
-      if not cache.has_key("type_"): cache["type_"] = {}
-      for x in sorted(cache[type_].keys()):
-        ref.write("%s %s\n" % (x, " ".join(sorted(cache[type_][x].keys()))))
+    write2File("%s/etc/dependencies/bf%s.out" % (rel, type_), cache, type_)
 
 for root, dirs, files in os.walk(directory):
   for filename in files:
     name = os.path.join(root, filename)
     if re.search( r'^.*(\.dep|\/a\/xr+\.cc\.d)', name): doexec()
 
-with open(rel + "/etc/dependencies/uses.out", 'w') as file:
-  for key, value in sorted(uses.items()):
-    file.write("%s %s\n" % (key,value))
-
-with open(rel + "/etc/dependencies/usedby.out", 'w') as file:
-  for key, value in sorted(usedby.items()):
-    file.write("%s %s\n" % (key,value))
-
+write2File(rel + "/etc/dependencies/uses.out", uses)
+write2File(rel + "/etc/dependencies/usedby.out", usedby)
 pythonDeps(rel)
 buildFileDeps(rel, scramarch, scramroot)
 sys.exit()
