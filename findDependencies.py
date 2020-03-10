@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-# from os import environ, popen
 import sys, re, os, json, gzip
 from argparse import ArgumentParser
 from glob import glob
@@ -63,6 +62,17 @@ def doexec():
             else: 
               usedby[tsp1] += "%s " % depname
 
+def createCache(match, cache):
+  for x in import2CMSSWDir(match.group(1), cache):
+    if not cache.has_key("usedby"): cache["usedby"] = {}
+    if not cache.has_key("uses"): cache["uses"] = {}
+    if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
+    if not cache["uses"].has_key(file): cache["uses"][file] = {}
+    if not cache["usedby"][x].has_key(file): cache["usedby"][x][file] = {}
+    if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
+    cache["usedby"][x][file] = 1
+    cache["uses"][file][x] = 1
+
 def pythonDeps(rel):
   cache = {}
   for root, dirs, files in os.walk("%s/src/" % rel):
@@ -83,25 +93,9 @@ def pythonDeps(rel):
               match_from_import = re.search(r'^\s*from\s+([^\s]+)\s+import\s+', line)
               match_import = re.search(r'^\s*import\s+([^\s]+)\s*', line)
               if match_from_import:
-                for x in import2CMSSWDir(match_from_import.group(1), cache):
-                  if not cache.has_key("usedby"): cache["usedby"] = {}
-                  if not cache.has_key("uses"): cache["uses"] = {}
-                  if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
-                  if not cache["uses"].has_key(file): cache["uses"][file] = {}
-                  if not cache["usedby"][x].has_key(file): cache["usedby"][x][file] = {}
-                  if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
-                  cache["usedby"][x][file] = 1
-                  cache["uses"][file][x] = 1
+                createCache(match_from_import, cache)
               elif match_import:
-                for x in import2CMSSWDir(match_import.group(1), cache):
-                  if not cache.has_key("usedby"): cache["usedby"] = {}
-                  if not cache.has_key("uses"): cache["uses"] = {}
-                  if not cache["usedby"].has_key(x): cache["usedby"][x] = {}
-                  if not cache["uses"].has_key(file): cache["uses"][file] = {}
-                  if not cache["usedby"][x].has_key(file): cache["usedby"][x][file] = {}
-                  if not cache["uses"][file].has_key(x): cache["uses"][file][x] = {}
-                  cache["usedby"][x][file] = 1
-                  cache["uses"][file][x] = 1
+                createCache(match_import, cache)
   for type_ in ("uses","usedby"):
     with open("%s/etc/dependencies/py%s.out" % (rel, type_), 'w') as ref:
       for x in sorted(cache[type_].keys()):
